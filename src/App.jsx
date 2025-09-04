@@ -37,59 +37,7 @@ const CATEGORIES = {
     'Accessories': ['Hats', 'Belt', 'Glasses']
 };
 
-// Sample posts data
-const SAMPLE_POSTS = [
-    {
-        id: '1',
-        userId: 'user1',
-        username: 'streetstyle',
-        imageUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iIzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5TYW1wbGUgT3V0Zml0IDE8L3RleHQ+PC9zdmc+',
-        caption: 'Monochrome vibes today',
-        clothingItems: {
-            'Tops - T-Shirt': 'Rick Owens',
-            'Bottoms - Pants': 'Rick Owens',
-            'Footwear': 'Balenciaga',
-            'Accessories - Belt': 'Chrome Hearts'
-        },
-        isFullBrand: false,
-        fullBrandName: null,
-        likes: 42,
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        likedBy: []
-    },
-    {
-        id: '2',
-        userId: 'user2',
-        username: 'hypebeast',
-        imageUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5TYW1wbGUgT3V0Zml0IDI8L3RleHQ+PC9zdmc+',
-        caption: 'Supreme takeover',
-        clothingItems: {},
-        isFullBrand: true,
-        fullBrandName: 'Supreme',
-        likes: 128,
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        likedBy: []
-    },
-    {
-        id: '3',
-        userId: 'user3',
-        username: 'minimal',
-        imageUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5TYW1wbGUgT3V0Zml0IDM8L3RleHQ+PC9zdmc+',
-        caption: 'Clean fits for the office',
-        clothingItems: {
-            'Tops - Button Up': 'Uniqlo',
-            'Tailoring - Blazer': 'COS',
-            'Bottoms - Pants': 'Uniqlo',
-            'Footwear': 'Common Projects',
-            'Accessories - Glasses': 'Ray-Ban'
-        },
-        isFullBrand: false,
-        fullBrandName: null,
-        likes: 67,
-        timestamp: new Date(Date.now() - 10800000).toISOString(),
-        likedBy: []
-    }
-];
+// Sample posts data removed - now using Supabase data
 
 function App() {
     const [user, setUser] = useState(null);
@@ -100,12 +48,12 @@ function App() {
     const [currentProfile, setCurrentProfile] = useState(null);
     const [showCreatePost, setShowCreatePost] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    // Search query state removed - now handled in SearchModal
     const [searchFullBrand, setSearchFullBrand] = useState(false);
     const [loading, setLoading] = useState(true);
     const [following, setFollowing] = useState([]);
     const [feedType, setFeedType] = useState('all'); // 'all', 'following', 'explore'
-    const [profileTheme, setProfileTheme] = useState('streaming'); // 'vinyl', 'cassette', 'streaming'
+    // Profile theme state removed - now handled in Profile component
 
     // Initialize dark mode preference and check for existing session
     useEffect(() => {
@@ -153,14 +101,14 @@ function App() {
     // Fetch posts from Supabase
     useEffect(() => {
         fetchPosts();
-    }, [feedType, following]);
+    }, [feedType, following, fetchPosts]);
 
     // Fetch following when user logs in
     useEffect(() => {
         if (user) {
             fetchFollowing();
         }
-    }, [user]);
+    }, [user, fetchFollowing]);
 
     // Realtime updates for posts
     useEffect(() => {
@@ -174,12 +122,10 @@ function App() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [fetchPosts]);
 
     // Helper Functions
-    const generateId = () => {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    };
+    // generateId function removed - using Supabase auto-generated IDs
 
     const getInitial = (username) => {
         return username ? username[0].toUpperCase() : '?';
@@ -479,7 +425,7 @@ function App() {
 
         // Mix 70% taste-based with 30% random discovery
         const tasteBasedCount = Math.floor(posts.length * 0.7);
-        const discoveryCount = posts.length - tasteBasedCount;
+        // discoveryCount variable removed - not used
 
         const tasteBased = scoredPosts.slice(0, tasteBasedCount);
         const discovery = scoredPosts.slice(tasteBasedCount);
@@ -558,7 +504,7 @@ function App() {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Math.random()}.${fileExt}`;
             
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('outfits')
                 .upload(fileName, file);
 
