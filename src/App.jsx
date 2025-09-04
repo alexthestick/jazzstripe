@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { supabase } from './lib/supabase';
 
@@ -101,7 +101,7 @@ function App() {
     // Fetch posts from Supabase
     useEffect(() => {
         fetchPosts();
-    }, [feedType, following, fetchPosts]);
+    }, [fetchPosts]);
 
     // Fetch following when user logs in
     useEffect(() => {
@@ -301,7 +301,7 @@ function App() {
         setView('feed');
     };
 
-    const fetchFollowing = async () => {
+    const fetchFollowing = useCallback(async () => {
         if (!user) return;
 
         const { data } = await supabase
@@ -312,7 +312,7 @@ function App() {
         if (data) {
             setFollowing(data.map(f => f.following_id));
         }
-    };
+    }, [user]);
 
     const toggleFollow = async (userId) => {
         if (!user) {
@@ -340,9 +340,9 @@ function App() {
 
             setFollowing([...following, userId]);
         }
-    };
+    }, [user, following]);
 
-    const fetchPosts = async () => {
+    const fetchPosts = useCallback(async () => {
         setLoading(true);
         let query = supabase
             .from('posts')
@@ -394,7 +394,7 @@ function App() {
             setPosts(transformedPosts);
         }
         setLoading(false);
-    };
+    }, [feedType, following, user]);
 
     const generateSmartExploreFeed = async (posts) => {
         if (!user) return posts;
@@ -603,7 +603,7 @@ function App() {
 
         useEffect(() => {
             fetchCommentCount();
-        }, [post.id]);
+        }, [post.id, fetchCommentCount]);
 
         useEffect(() => {
             if (!user || !postRef.current) return;
@@ -631,9 +631,9 @@ function App() {
             return () => {
                 observer.disconnect();
             };
-        }, [user, viewStartTime]);
+        }, [user, viewStartTime, post.id, trackViewPattern]);
 
-        const trackViewPattern = async (postId, duration) => {
+        const trackViewPattern = useCallback(async (postId, duration) => {
             if (!user) return;
 
             try {
@@ -648,15 +648,15 @@ function App() {
             } catch (error) {
                 console.log('View tracking error:', error);
             }
-        };
+        }, [user]);
 
-        const fetchCommentCount = async () => {
+        const fetchCommentCount = useCallback(async () => {
             const { count } = await supabase
                 .from('comments')
                 .select('*', { count: 'exact', head: true })
                 .eq('post_id', post.id);
             setCommentCount(count || 0);
-        };
+        }, [post.id]);
 
         const findSimilarVibes = async () => {
             // Simple vibe matching based on brand tier and style patterns
@@ -1051,9 +1051,9 @@ function App() {
             if (isOpen) {
                 fetchComments();
             }
-        }, [isOpen, postId]);
+        }, [isOpen, postId, fetchComments]);
 
-        const fetchComments = async () => {
+        const fetchComments = useCallback(async () => {
             const { data, error } = await supabase
                 .from('comments')
                 .select(`
@@ -1066,7 +1066,7 @@ function App() {
             if (!error && data) {
                 setComments(data);
             }
-        };
+        }, [postId]);
 
         const submitComment = async (e) => {
             e.preventDefault();
@@ -1582,9 +1582,9 @@ function App() {
             fetchProfilePosts();
             fetchFollowStats();
             fetchProfileTheme();
-        }, [userId]);
+        }, [userId, fetchProfilePosts, fetchFollowStats, fetchProfileTheme]);
 
-        const fetchProfileTheme = async () => {
+        const fetchProfileTheme = useCallback(async () => {
             if (user && user.id === userId) {
                 const { data } = await supabase
                     .from('profiles')
@@ -1596,7 +1596,7 @@ function App() {
                     setUserProfileTheme(data.theme_preference);
                 }
             }
-        };
+        }, [user, userId]);
 
         const updateProfileTheme = async (theme) => {
             if (!user || user.id !== userId) return;
@@ -1612,7 +1612,7 @@ function App() {
             }
         };
 
-        const fetchFollowStats = async () => {
+        const fetchFollowStats = useCallback(async () => {
             const { count: followers } = await supabase
                 .from('follows')
                 .select('*', { count: 'exact', head: true })
@@ -1625,9 +1625,9 @@ function App() {
 
             setFollowerCount(followers || 0);
             setFollowingCount(followingNum || 0);
-        };
+        }, [userId]);
 
-        const fetchProfilePosts = async () => {
+        const fetchProfilePosts = useCallback(async () => {
             setProfileLoading(true);
             const { data, error } = await supabase
                 .from('posts')
@@ -1657,7 +1657,7 @@ function App() {
                 setPostCount(transformedPosts.length);
             }
             setProfileLoading(false);
-        };
+        }, [userId]);
 
         return (
             <div className="profile-container">
