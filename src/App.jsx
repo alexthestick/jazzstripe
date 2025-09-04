@@ -98,6 +98,61 @@ function App() {
         }
     }, [darkMode]);
 
+    // Move fetchPosts before useEffect calls
+    const fetchPosts = useCallback(async () => {
+        setLoading(true);
+        let query = supabase
+            .from('posts')
+            .select(`
+                *,
+                profiles!user_id (username),
+                likes (user_id),
+                comments (id)
+            `);
+
+        if (feedType === 'following' && user && following.length > 0) {
+            query = query.in('user_id', following);
+        } else if (feedType === 'explore') {
+            // For explore, show posts from last 7 days sorted by engagement
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            query = query.gte('created_at', weekAgo.toISOString());
+        }
+
+        const { data, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (!error && data) {
+            let transformedPosts = data.map(post => ({
+                id: post.id,
+                userId: post.user_id,
+                username: post.profiles?.username || 'Unknown',
+                imageUrl: post.image_url,
+                caption: post.caption,
+                clothingItems: post.clothing_items || {},
+                isFullBrand: post.is_full_brand,
+                fullBrandName: post.full_brand_name,
+                likes: post.likes?.length || 0,
+                timestamp: post.created_at,
+                likedBy: post.likes?.map(like => like.user_id) || [],
+                commentCount: post.comments?.length || 0,
+                engagement: (post.likes?.length || 0) + (post.comments?.length || 0)
+            }));
+
+            // Smart explore algorithm: 70% taste-based, 30% discovery
+            if (feedType === 'explore' && user) {
+                transformedPosts = await generateSmartExploreFeed(transformedPosts);
+            } else if (feedType === 'explore') {
+                // Sort by engagement for non-logged-in users
+                transformedPosts.sort((a, b) => b.engagement - a.engagement);
+            }
+
+            setPosts(transformedPosts);
+        }
+        setLoading(false);
+    }, [feedType, following, user]);
+
     // Fetch posts from Supabase
     useEffect(() => {
         fetchPosts();
@@ -341,60 +396,6 @@ function App() {
             setFollowing([...following, userId]);
         }
     };
-
-    const fetchPosts = useCallback(async () => {
-        setLoading(true);
-        let query = supabase
-            .from('posts')
-            .select(`
-                *,
-                profiles!user_id (username),
-                likes (user_id),
-                comments (id)
-            `);
-
-        if (feedType === 'following' && user && following.length > 0) {
-            query = query.in('user_id', following);
-        } else if (feedType === 'explore') {
-            // For explore, show posts from last 7 days sorted by engagement
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            query = query.gte('created_at', weekAgo.toISOString());
-        }
-
-        const { data, error } = await query
-            .order('created_at', { ascending: false })
-            .limit(50);
-        
-        if (!error && data) {
-            let transformedPosts = data.map(post => ({
-                id: post.id,
-                userId: post.user_id,
-                username: post.profiles?.username || 'Unknown',
-                imageUrl: post.image_url,
-                caption: post.caption,
-                clothingItems: post.clothing_items || {},
-                isFullBrand: post.is_full_brand,
-                fullBrandName: post.full_brand_name,
-                likes: post.likes?.length || 0,
-                timestamp: post.created_at,
-                likedBy: post.likes?.map(like => like.user_id) || [],
-                commentCount: post.comments?.length || 0,
-                engagement: (post.likes?.length || 0) + (post.comments?.length || 0)
-            }));
-
-            // Smart explore algorithm: 70% taste-based, 30% discovery
-            if (feedType === 'explore' && user) {
-                transformedPosts = await generateSmartExploreFeed(transformedPosts);
-            } else if (feedType === 'explore') {
-                // Sort by engagement for non-logged-in users
-                transformedPosts.sort((a, b) => b.engagement - a.engagement);
-            }
-
-            setPosts(transformedPosts);
-        }
-        setLoading(false);
-    }, [feedType, following, user]);
 
     const generateSmartExploreFeed = async (posts) => {
         if (!user) return posts;
