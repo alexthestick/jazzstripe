@@ -340,7 +340,7 @@ function App() {
 
             setFollowing([...following, userId]);
         }
-    }, [user, following]);
+    };
 
     const fetchPosts = useCallback(async () => {
         setLoading(true);
