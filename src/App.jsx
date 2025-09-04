@@ -209,34 +209,6 @@ function App() {
         return date.toLocaleDateString();
     };
 
-    const getLogoSvg = () => {
-        return (
-            <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 50 100 L 50 40 M 50 70 L 80 70 M 50 100 L 80 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-                <circle cx="65" cy="50" r="8" fill="currentColor"/>
-                
-                <path d="M 120 100 Q 120 70, 140 70 Q 160 70, 160 100 L 160 130 Q 160 150, 140 150 Q 120 150, 120 130 Z" stroke="currentColor" strokeWidth="8" fill="none"/>
-                <path d="M 120 70 Q 120 50, 140 50 Q 160 50, 160 70" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <path d="M 200 70 L 240 70 L 200 100 L 240 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <path d="M 280 70 L 320 70 L 280 100 L 320 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <path d="M 360 140 Q 400 150, 440 140 L 440 60 Q 440 40, 460 40 Q 480 40, 480 60 L 480 100" stroke="currentColor" strokeWidth="10" fill="none" strokeLinecap="round"/>
-                
-                <path d="M 520 40 L 520 100 M 520 70 L 540 70 Q 560 70, 560 85 Q 560 100, 540 100 L 520 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-                <path d="M 520 100 L 520 130" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <circle cx="600" cy="50" r="8" fill="currentColor"/>
-                <path d="M 600 70 L 600 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <path d="M 640 70 L 640 100 Q 640 120, 660 120 Q 680 120, 680 100 L 680 70 Q 680 50, 700 50 Q 720 50, 720 70 L 720 100 Q 720 130, 690 130" stroke="currentColor" strokeWidth="8" fill="none"/>
-                
-                <path d="M 760 70 Q 780 70, 790 85 Q 780 100, 760 100 Q 740 100, 740 85 Q 740 70, 760 70 Z" stroke="currentColor" strokeWidth="8" fill="none"/>
-                <path d="M 790 85 L 800 100" stroke="currentColor" strokeWidth="8" fill="none"/>
-            </svg>
-        );
-    };
 
     // Event Handlers
     const toggleTheme = () => {
