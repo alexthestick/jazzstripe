@@ -554,7 +554,8 @@ function App() {
 
     // Comments Modal Component
     const CommentsModal = () => {
-        if (!showComments || !selectedPostComments) return null;
+        // Don't render on mobile - mobile uses PostPage navigation
+        if (isMobile || !showComments || !selectedPostComments) return null;
 
         const postComments = comments[selectedPostComments.id] || [];
 
@@ -1206,11 +1207,15 @@ function App() {
     };
 
     const openComments = async (post) => {
+        console.log('openComments called:', { isMobile, postId: post.id, windowWidth: window.innerWidth });
+        
         if (isMobile) {
             // Mobile: Navigate to dedicated post page
+            console.log('Navigating to mobile post page:', `/post/${post.id}`);
             navigate(`/post/${post.id}`);
         } else {
             // Desktop: Open side panel
+            console.log('Opening desktop side panel');
             setSelectedPostComments(post);
             setShowComments(true);
             await fetchComments(post.id);
