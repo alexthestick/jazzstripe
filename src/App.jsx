@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { supabase } from './lib/supabase';
 
@@ -11,6 +12,8 @@ import SearchModal from './components/SearchModal';
 import CreatePostModal from './components/CreatePostModal';
 import Profile from './components/Profile';
 import AuthModal from './components/AuthModal';
+import PostPage from './components/PostPage';
+import useIsMobile from './hooks/useIsMobile';
 
 // Brand list
 const BRANDS = [
@@ -77,6 +80,11 @@ function App() {
     const [replyTexts, setReplyTexts] = useState({});
     const [collapsedThreads, setCollapsedThreads] = useState(new Set());
     const [commentVotes, setCommentVotes] = useState({});
+
+    // Mobile detection
+    const isMobile = useIsMobile();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     // Initialize dark mode preference and check for existing session
     useEffect(() => {
@@ -1198,9 +1206,15 @@ function App() {
     };
 
     const openComments = async (post) => {
-        setSelectedPostComments(post);
-        setShowComments(true);
-        await fetchComments(post.id);
+        if (isMobile) {
+            // Mobile: Navigate to dedicated post page
+            navigate(`/post/${post.id}`);
+        } else {
+            // Desktop: Open side panel
+            setSelectedPostComments(post);
+            setShowComments(true);
+            await fetchComments(post.id);
+        }
     };
 
     // Main render
@@ -1289,4 +1303,16 @@ function App() {
     );
 }
 
-export default App;
+// Wrapper component with Router
+function AppWrapper() {
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<App />} />
+                <Route path="/post/:postId" element={<PostPage />} />
+            </Routes>
+        </Router>
+    );
+}
+
+export default AppWrapper;
