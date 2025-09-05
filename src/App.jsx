@@ -552,93 +552,127 @@ function App() {
         );
     };
 
-    // Comments Modal Component (Desktop Only - Instagram Style)
+    // Instagram-Style Comments Modal Component (Desktop Only)
     const CommentsModal = () => {
-        const postComments = comments[selectedPostComments.id] || [];
+        const postComments = comments[selectedPostComments?.id] || [];
 
-        // Move useEffect BEFORE the early return
+        // Prevent body scroll when modal is open
         useEffect(() => {
             if (showComments && selectedPostComments && !isMobile) {
-                // Add class to body for any needed styling adjustments
-                document.body.classList.add('comments-open');
+                document.body.style.overflow = 'hidden';
                 
                 return () => {
-                    document.body.classList.remove('comments-open');
+                    document.body.style.overflow = 'unset';
                 };
             }
         }, [showComments, selectedPostComments, isMobile]);
 
-        // NOW do the early return AFTER hooks
+        // Don't render on mobile or if no post selected
         if (isMobile || !showComments || !selectedPostComments) return null;
 
-        // Close when clicking outside the panel
         const handleOverlayClick = (e) => {
-            // Only close if clicking on the transparent overlay area, not the panel
             if (e.target === e.currentTarget) {
                 setShowComments(false);
             }
         };
 
+        const handleClose = () => {
+            setShowComments(false);
+        };
+
         return (
             <div className="modal-overlay" onClick={handleOverlayClick}>
-                <div className="modal-content comments-modal" onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                        <h2>Comments</h2>
-                        <button className="close-button" onClick={() => setShowComments(false)}>✕</button>
+                <div className="modal-content comments-modal">
+                    {/* Close button */}
+                    <button className="modal-close-btn" onClick={handleClose}>
+                        ✕
+                    </button>
+                    
+                    {/* Post section (left side) */}
+                    <div className="post-section">
+                        <div className="post-image-container">
+                            <img 
+                                src={selectedPostComments.imageUrl} 
+                                alt="Post" 
+                                className="post-image-full"
+                            />
+                        </div>
                     </div>
                     
-                    <div className="comments-post-info">
-                        <span className="username">@{selectedPostComments.username}</span>
-                        <p className="caption">{selectedPostComments.caption}</p>
-                    </div>
-
-                    <div className="comments-list">
-                        {loadingComments ? (
-                            <div className="loading">Loading comments...</div>
-                        ) : postComments.length === 0 ? (
-                            <div className="no-comments">No comments yet. Be the first!</div>
-                        ) : (
-                            <div>
-                                {postComments.map(comment => {
-                                    try {
-                                        return <CommentThread key={comment.id} comment={comment} />;
-                                    } catch (error) {
-                                        console.error('Error rendering comment:', error, comment);
-                                        return (
-                                            <div key={comment.id} className="comment">
-                                                <div className="comment-header">
-                                                    <span className="comment-username">@{comment.username}</span>
-                                                    <span className="comment-timestamp">{comment.timestamp}</span>
-                                                </div>
-                                                <p className="comment-content">{comment.content}</p>
-                                            </div>
-                                        );
-                                    }
-                                })}
+                    {/* Comments section (right side) */}
+                    <div className="comments-section-modal">
+                        {/* Post header */}
+                        <div className="post-header-modal">
+                            <div className="post-avatar">
+                                {getInitial(selectedPostComments.username)}
+                            </div>
+                            <div className="post-user-info">
+                                <h4>@{selectedPostComments.username}</h4>
+                                <div className="timestamp">
+                                    {formatTimestamp(selectedPostComments.timestamp)}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Post caption */}
+                        {selectedPostComments.caption && (
+                            <div className="post-caption-modal">
+                                {selectedPostComments.caption}
                             </div>
                         )}
-                    </div>
-
-                    <div className="comment-input-section">
-                        <input
-                            type="text"
-                            placeholder="Add a comment..."
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    postComment(selectedPostComments.id);
-                                }
-                            }}
-                            className="comment-input"
-                        />
-                        <button 
-                            onClick={() => postComment(selectedPostComments.id)}
-                            className="comment-submit-button"
-                            disabled={!commentText.trim()}
-                        >
-                            Post
-                        </button>
+                        
+                        {/* Comments list */}
+                        <div className="comments-list-modal">
+                            {loadingComments ? (
+                                <div className="loading-comments">Loading comments...</div>
+                            ) : postComments.length === 0 ? (
+                                <div className="no-comments-modal">No comments yet. Be the first!</div>
+                            ) : (
+                                postComments.map(comment => (
+                                    <div key={comment.id} className="comment-item">
+                                        <div className="comment-avatar">
+                                            {getInitial(comment.username)}
+                                        </div>
+                                        <div className="comment-content">
+                                            <div className="comment-header">
+                                                <span className="comment-username">{comment.username}</span>
+                                                <span className="comment-time">{comment.timestamp}</span>
+                                            </div>
+                                            <p className="comment-text">{comment.content}</p>
+                                            <div className="comment-actions">
+                                                <button className="comment-action-btn">Reply</button>
+                                                <button className="comment-action-btn">
+                                                    ♥ {comment.score || 0}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        {/* Comment input */}
+                        <div className="comment-input-modal">
+                            <input
+                                type="text"
+                                placeholder="Add a comment..."
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                        postComment(selectedPostComments.id);
+                                    }
+                                }}
+                                className="comment-input-field"
+                            />
+                            <button 
+                                onClick={() => postComment(selectedPostComments.id)}
+                                className="comment-post-btn"
+                                disabled={!commentText.trim()}
+                            >
+                                Post
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
