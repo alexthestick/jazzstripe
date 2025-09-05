@@ -554,20 +554,22 @@ function App() {
 
     // Comments Modal Component (Desktop Only - Instagram Style)
     const CommentsModal = () => {
-        // Don't render on mobile
-        if (isMobile || !showComments || !selectedPostComments) return null;
-
         const postComments = comments[selectedPostComments.id] || [];
 
-        // Don't prevent body scroll - let users interact with main content
+        // Move useEffect BEFORE the early return
         useEffect(() => {
-            // Add class to body for any needed styling adjustments
-            document.body.classList.add('comments-open');
-            
-            return () => {
-                document.body.classList.remove('comments-open');
-            };
-        }, []);
+            if (showComments && selectedPostComments && !isMobile) {
+                // Add class to body for any needed styling adjustments
+                document.body.classList.add('comments-open');
+                
+                return () => {
+                    document.body.classList.remove('comments-open');
+                };
+            }
+        }, [showComments, selectedPostComments, isMobile]);
+
+        // NOW do the early return AFTER hooks
+        if (isMobile || !showComments || !selectedPostComments) return null;
 
         // Close when clicking outside the panel
         const handleOverlayClick = (e) => {
