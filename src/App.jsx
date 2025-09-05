@@ -552,15 +552,33 @@ function App() {
         );
     };
 
-    // Comments Modal Component
+    // Comments Modal Component (Desktop Only - Instagram Style)
     const CommentsModal = () => {
-        // Don't render on mobile - mobile uses PostPage navigation
+        // Don't render on mobile
         if (isMobile || !showComments || !selectedPostComments) return null;
 
         const postComments = comments[selectedPostComments.id] || [];
 
+        // Don't prevent body scroll - let users interact with main content
+        useEffect(() => {
+            // Add class to body for any needed styling adjustments
+            document.body.classList.add('comments-open');
+            
+            return () => {
+                document.body.classList.remove('comments-open');
+            };
+        }, []);
+
+        // Close when clicking outside the panel
+        const handleOverlayClick = (e) => {
+            // Only close if clicking on the transparent overlay area, not the panel
+            if (e.target === e.currentTarget) {
+                setShowComments(false);
+            }
+        };
+
         return (
-            <div className="modal-overlay" onClick={() => setShowComments(false)}>
+            <div className="modal-overlay" onClick={handleOverlayClick}>
                 <div className="modal-content comments-modal" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2>Comments</h2>
@@ -579,7 +597,6 @@ function App() {
                             <div className="no-comments">No comments yet. Be the first!</div>
                         ) : (
                             <div>
-                                <div>Found {postComments.length} comments</div>
                                 {postComments.map(comment => {
                                     try {
                                         return <CommentThread key={comment.id} comment={comment} />;
