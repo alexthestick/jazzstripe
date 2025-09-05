@@ -271,6 +271,7 @@ const Post = ({
                 user={user}
                 getInitial={getInitial}
                 formatTimestamp={formatTimestamp}
+                selectedPost={post}
             />
             {showSimilar && (
                 <div style={{

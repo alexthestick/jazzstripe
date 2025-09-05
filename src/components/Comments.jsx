@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-const Comments = ({ postId, isOpen, onClose, user, getInitial, formatTimestamp }) => {
+const Comments = ({ postId, isOpen, onClose, user, getInitial, formatTimestamp, selectedPost }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        }
+        
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
     const fetchComments = useCallback(async () => {
         try {
@@ -59,105 +70,77 @@ const Comments = ({ postId, isOpen, onClose, user, getInitial, formatTimestamp }
     if (!isOpen) return null;
 
     return (
-        <div className="comments-modal" style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: 'var(--bg, white)',
-            borderTopLeftRadius: '20px',
-            borderTopRightRadius: '20px',
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
-            maxHeight: '70vh',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
-            <div style={{
-                padding: '20px',
-                borderBottom: '1px solid var(--border, #e0e0e0)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}>
-                <h3>Comments</h3>
-                <button onClick={onClose} style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer'
-                }}>×</button>
-            </div>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content comments-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Comments</h2>
+                    <button className="close-button" onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
+                
+                {selectedPost && (
+                    <div className="comments-post-info">
+                        <span className="username">@{selectedPost.username}</span>
+                        <p className="caption">{selectedPost.caption}</p>
+                    </div>
+                )}
 
-            <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '20px'
-            }}>
-                {comments.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#999' }}>
-                        No comments yet. Be the first!
-                    </p>
-                ) : (
-                    comments.map(comment => (
-                        <div key={comment.id} style={{
-                            marginBottom: '16px',
-                            display: 'flex',
-                            gap: '12px'
-                        }}>
-                            <div className="avatar" style={{ flexShrink: 0 }}>
-                                {getInitial(comment.profiles?.username)}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{
-                                    fontWeight: 'bold',
-                                    marginBottom: '4px'
-                                }}>
-                                    {comment.profiles?.username}
+                <div className="comments-list">
+                    {loading ? (
+                        <div className="loading">Loading comments...</div>
+                    ) : comments.length === 0 ? (
+                        <div className="no-comments">No comments yet. Be the first!</div>
+                    ) : (
+                        <div>
+                            {comments.map(comment => (
+                                <div key={comment.id} className="comment">
+                                    <div className="avatar">
+                                        {getInitial(comment.profiles?.username)}
+                                    </div>
+                                    <div className="comment-content-wrapper">
+                                        <div className="comment-header">
+                                            <span className="comment-username">
+                                                {comment.profiles?.username}
+                                            </span>
+                                            <span className="comment-timestamp">
+                                                {formatTimestamp(comment.created_at)}
+                                            </span>
+                                        </div>
+                                        <div className="comment-content">
+                                            {comment.content}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>{comment.content}</div>
-                                <div style={{
-                                    fontSize: '12px',
-                                    color: '#999',
-                                    marginTop: '4px'
-                                }}>
-                                    {formatTimestamp(comment.created_at)}
-                                </div>
-                            </div>
+                            ))}
                         </div>
-                    ))
+                    )}
+                </div>
+
+                {user && (
+                    <div className="comment-input-section">
+                        <input
+                            type="text"
+                            placeholder="Add a comment..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    submitComment(e);
+                                }
+                            }}
+                            className="comment-input"
+                        />
+                        <button 
+                            onClick={submitComment}
+                            className="comment-submit-button"
+                            disabled={loading || !newComment.trim()}
+                        >
+                            Post
+                        </button>
+                    </div>
                 )}
             </div>
-
-            {user && (
-                <form onSubmit={submitComment} style={{
-                    padding: '20px',
-                    borderTop: '1px solid var(--border, #e0e0e0)',
-                    display: 'flex',
-                    gap: '12px'
-                }}>
-                    <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        style={{
-                            flex: 1,
-                            padding: '10px',
-                            border: '1px solid var(--border, #e0e0e0)',
-                            borderRadius: '20px',
-                            outline: 'none'
-                        }}
-                    />
-                    <button
-                        type="submit"
-                        className="btn"
-                        disabled={loading || !newComment.trim()}
-                    >
-                        Post
-                    </button>
-                </form>
-            )}
         </div>
     );
 };
