@@ -6,26 +6,35 @@ const Comments = ({ postId, isOpen, onClose, user, getInitial, formatTimestamp }
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const fetchComments = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .select(`
+                    *,
+                    profiles:user_id (username)
+                `)
+                .eq('post_id', postId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching comments:', error);
+                return;
+            }
+            
+            if (data) {
+                setComments(data);
+            }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        }
+    }, [postId]);
+
     useEffect(() => {
         if (isOpen) {
             fetchComments();
         }
     }, [isOpen, postId, fetchComments]);
-
-    const fetchComments = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('comments')
-            .select(`
-                *,
-                profiles:user_id (username)
-            `)
-            .eq('post_id', postId)
-            .order('created_at', { ascending: false });
-
-        if (!error && data) {
-            setComments(data);
-        }
-    }, [postId]);
 
     const submitComment = async (e) => {
         e.preventDefault();

@@ -20,12 +20,6 @@ const Profile = ({
     const [userProfileTheme, setUserProfileTheme] = useState('streaming');
     const [showThemeSelector, setShowThemeSelector] = useState(false);
 
-    useEffect(() => {
-        fetchProfilePosts();
-        fetchFollowStats();
-        fetchProfileTheme();
-    }, [userId, fetchProfilePosts, fetchFollowStats, fetchProfileTheme]);
-
     const fetchProfileTheme = useCallback(async () => {
         if (user && user.id === userId) {
             const { data } = await supabase
@@ -39,6 +33,85 @@ const Profile = ({
             }
         }
     }, [user, userId]);
+
+    const fetchFollowStats = useCallback(async () => {
+        try {
+            const { count: followers, error: followersError } = await supabase
+                .from('follows')
+                .select('*', { count: 'exact', head: true })
+                .eq('following_id', userId);
+
+            const { count: followingNum, error: followingError } = await supabase
+                .from('follows')
+                .select('*', { count: 'exact', head: true })
+                .eq('follower_id', userId);
+
+            if (followersError) {
+                console.error('Error fetching followers count:', followersError);
+            } else {
+                setFollowerCount(followers || 0);
+            }
+
+            if (followingError) {
+                console.error('Error fetching following count:', followingError);
+            } else {
+                setFollowingCount(followingNum || 0);
+            }
+        } catch (error) {
+            console.error('Error fetching follow stats:', error);
+        }
+    }, [userId]);
+
+    const fetchProfilePosts = useCallback(async () => {
+        setProfileLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('posts')
+                .select(`
+                    *,
+                    profiles!user_id (username),
+                    likes (user_id)
+                `)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching profile posts:', error);
+                setProfileLoading(false);
+                return;
+            }
+            
+            if (data) {
+                const transformedPosts = data.map(post => ({
+                    id: post.id,
+                    userId: post.user_id,
+                    username: post.profiles?.username || 'Unknown',
+                    imageUrl: post.image_url,
+                    caption: post.caption,
+                    clothingItems: post.clothing_items || {},
+                    isFullBrand: post.is_full_brand,
+                    fullBrandName: post.full_brand_name,
+                    likes: post.likes?.length || 0,
+                    timestamp: post.created_at,
+                    likedBy: post.likes?.map(like => like.user_id) || [],
+                    commentCount: 0, // Simplified for profile view
+                    engagement: post.likes?.length || 0
+                }));
+                setProfilePosts(transformedPosts);
+                setPostCount(transformedPosts.length);
+            }
+        } catch (error) {
+            console.error('Error fetching profile posts:', error);
+        } finally {
+            setProfileLoading(false);
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        fetchProfilePosts();
+        fetchFollowStats();
+        fetchProfileTheme();
+    }, [userId, fetchProfilePosts, fetchFollowStats, fetchProfileTheme]);
 
     const updateProfileTheme = async (theme) => {
         if (!user || user.id !== userId) return;
@@ -54,52 +127,6 @@ const Profile = ({
         }
     };
 
-    const fetchFollowStats = useCallback(async () => {
-        const { count: followers } = await supabase
-            .from('follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('following_id', userId);
-
-        const { count: followingNum } = await supabase
-            .from('follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('follower_id', userId);
-
-        setFollowerCount(followers || 0);
-        setFollowingCount(followingNum || 0);
-    }, [userId]);
-
-    const fetchProfilePosts = useCallback(async () => {
-        setProfileLoading(true);
-        const { data, error } = await supabase
-            .from('posts')
-            .select(`
-                *,
-                profiles!user_id (username),
-                likes (user_id)
-            `)
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-        
-        if (!error && data) {
-            const transformedPosts = data.map(post => ({
-                id: post.id,
-                userId: post.user_id,
-                username: post.profiles?.username || username,
-                imageUrl: post.image_url,
-                caption: post.caption,
-                clothingItems: post.clothing_items || {},
-                isFullBrand: post.is_full_brand,
-                fullBrandName: post.full_brand_name,
-                likes: post.likes?.length || 0,
-                timestamp: post.created_at,
-                likedBy: post.likes?.map(like => like.user_id) || []
-            }));
-            setProfilePosts(transformedPosts);
-            setPostCount(transformedPosts.length);
-        }
-        setProfileLoading(false);
-    }, [userId, username]);
 
     return (
         <div className="profile-container">

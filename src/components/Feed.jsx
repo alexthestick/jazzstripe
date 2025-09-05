@@ -11,7 +11,8 @@ const Feed = ({
     filterByBrand, 
     toggleLike, 
     setCurrentProfile, 
-    setView 
+    setView,
+    openComments
 }) => {
     if (loading) {
         return (
@@ -58,6 +59,7 @@ const Feed = ({
             toggleLike={toggleLike}
             setCurrentProfile={setCurrentProfile}
             setView={setView}
+            openComments={openComments}
         />
     ));
 };

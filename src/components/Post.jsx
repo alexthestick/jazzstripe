@@ -10,7 +10,8 @@ const Post = ({
     filterByBrand, 
     toggleLike, 
     setCurrentProfile, 
-    setView 
+    setView,
+    openComments
 }) => {
     const isLiked = user && post.likedBy.includes(user.id);
     const [showComments, setShowComments] = useState(false);
@@ -20,6 +21,41 @@ const Post = ({
     const [showSimilar, setShowSimilar] = useState(false);
     const [viewStartTime, setViewStartTime] = useState(null);
     const postRef = useRef(null);
+
+    const trackViewPattern = useCallback(async (postId, duration) => {
+        if (!user) return;
+
+        try {
+            await supabase
+                .from('view_patterns')
+                .insert({
+                    user_id: user.id,
+                    post_id: postId,
+                    view_duration: duration,
+                    scroll_depth: 0.5 // Simplified for now
+                });
+        } catch (error) {
+            console.log('View tracking error:', error);
+        }
+    }, [user]);
+
+    const fetchCommentCount = useCallback(async () => {
+        try {
+            const { count, error } = await supabase
+                .from('comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', post.id);
+            
+            if (error) {
+                console.error('Error fetching comment count:', error);
+                return;
+            }
+            
+            setCommentCount(count || 0);
+        } catch (error) {
+            console.error('Error fetching comment count:', error);
+        }
+    }, [post.id]);
 
     useEffect(() => {
         fetchCommentCount();
@@ -52,31 +88,6 @@ const Post = ({
             observer.disconnect();
         };
     }, [user, viewStartTime, post.id, trackViewPattern]);
-
-    const trackViewPattern = useCallback(async (postId, duration) => {
-        if (!user) return;
-
-        try {
-            await supabase
-                .from('view_patterns')
-                .insert({
-                    user_id: user.id,
-                    post_id: postId,
-                    view_duration: duration,
-                    scroll_depth: 0.5 // Simplified for now
-                });
-        } catch (error) {
-            console.log('View tracking error:', error);
-        }
-    }, [user]);
-
-    const fetchCommentCount = useCallback(async () => {
-        const { count } = await supabase
-            .from('comments')
-            .select('*', { count: 'exact', head: true })
-            .eq('post_id', post.id);
-        setCommentCount(count || 0);
-    }, [post.id]);
 
     const findSimilarVibes = async () => {
         // Simple vibe matching based on brand tier and style patterns
@@ -191,7 +202,7 @@ const Post = ({
                 </button>
                 <button
                     className="comment-btn"
-                    onClick={() => setShowComments(true)}
+                    onClick={() => openComments(post)}
                     style={{
                         background: 'none',
                         border: 'none',
@@ -201,7 +212,7 @@ const Post = ({
                         gap: '6px'
                     }}
                 >
-                    💬 <span>{commentCount}</span>
+                    💬 <span>{post.commentCount || 0}</span>
                 </button>
                 <div style={{ position: 'relative', marginLeft: 'auto' }}>
                     <button

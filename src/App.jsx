@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { supabase } from './lib/supabase';
 
@@ -64,6 +64,19 @@ function App() {
     const [following, setFollowing] = useState([]);
     const [feedType, setFeedType] = useState('all'); // 'all', 'following', 'explore'
     // Profile theme state removed - now handled in Profile component
+    
+    // Comments state
+    const [showComments, setShowComments] = useState(false);
+    const [selectedPostComments, setSelectedPostComments] = useState(null);
+    const [comments, setComments] = useState({});
+    const [commentText, setCommentText] = useState('');
+    const [loadingComments, setLoadingComments] = useState(false);
+    
+    // Threading and voting state
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyTexts, setReplyTexts] = useState({});
+    const [collapsedThreads, setCollapsedThreads] = useState(new Set());
+    const [commentVotes, setCommentVotes] = useState({});
 
     // Initialize dark mode preference and check for existing session
     useEffect(() => {
@@ -73,7 +86,11 @@ function App() {
         }
         
         // Check for existing session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (error) {
+                console.error('Error getting session:', error);
+                return;
+            }
             if (session) {
                 setUser({
                     id: session.user.id,
@@ -108,16 +125,115 @@ function App() {
         }
     }, [darkMode]);
 
+    // Smart explore feed functions
+    const analyzeUserPreferences = useCallback((posts, viewPatterns) => {
+        const preferences = {
+            brands: new Map(),
+            silhouettes: new Map(),
+            colorMoods: new Map()
+        };
+
+        // Analyze viewed posts
+        viewPatterns.forEach(pattern => {
+            const post = posts.find(p => p.id === pattern.post_id);
+            if (!post) return;
+
+            // Track brand preferences
+            Object.values(post.clothingItems).forEach(brand => {
+                preferences.brands.set(brand, (preferences.brands.get(brand) || 0) + pattern.view_duration);
+            });
+
+            // Simple silhouette detection (placeholder)
+            const isOversized = post.caption?.toLowerCase().includes('oversized') || 
+                               post.caption?.toLowerCase().includes('baggy');
+            const silhouette = isOversized ? 'oversized' : 'fitted';
+            preferences.silhouettes.set(silhouette, (preferences.silhouettes.get(silhouette) || 0) + pattern.view_duration);
+
+            // Simple color mood detection (placeholder)
+            const isMonochrome = post.caption?.toLowerCase().includes('monochrome') || 
+                               post.caption?.toLowerCase().includes('black and white');
+            const colorMood = isMonochrome ? 'monochrome' : 'colorful';
+            preferences.colorMoods.set(colorMood, (preferences.colorMoods.get(colorMood) || 0) + pattern.view_duration);
+        });
+
+        return preferences;
+    }, []);
+
+    const calculatePreferenceScore = useCallback((post, preferences) => {
+        let score = 0;
+
+        // Brand affinity
+        Object.values(post.clothingItems).forEach(brand => {
+            score += preferences.brands.get(brand) || 0;
+        });
+
+        // Silhouette preference
+        const isOversized = post.caption?.toLowerCase().includes('oversized') || 
+                           post.caption?.toLowerCase().includes('baggy');
+        const silhouette = isOversized ? 'oversized' : 'fitted';
+        score += preferences.silhouettes.get(silhouette) || 0;
+
+        // Color mood preference
+        const isMonochrome = post.caption?.toLowerCase().includes('monochrome') || 
+                           post.caption?.toLowerCase().includes('black and white');
+        const colorMood = isMonochrome ? 'monochrome' : 'colorful';
+        score += preferences.colorMoods.get(colorMood) || 0;
+
+        return score;
+    }, []);
+
+    const generateSmartExploreFeed = useCallback(async (posts) => {
+        if (!user) return posts;
+
+        // Get user's viewing patterns
+        const { data: viewPatterns } = await supabase
+            .from('view_patterns')
+            .select('post_id, view_duration')
+            .eq('user_id', user.id)
+            .gte('view_duration', 2000); // Only consider views longer than 2 seconds
+
+        if (!viewPatterns || viewPatterns.length === 0) {
+            // No patterns yet, return engagement-sorted posts
+            return posts.sort((a, b) => b.engagement - a.engagement);
+        }
+
+        // Analyze user preferences
+        const userPreferences = analyzeUserPreferences(posts, viewPatterns);
+        
+        // Score posts based on preferences
+        const scoredPosts = posts.map(post => ({
+            ...post,
+            preferenceScore: calculatePreferenceScore(post, userPreferences)
+        }));
+
+        // Sort by preference score
+        scoredPosts.sort((a, b) => b.preferenceScore - a.preferenceScore);
+
+        // Mix 70% taste-based with 30% random discovery
+        const tasteBasedCount = Math.floor(posts.length * 0.7);
+        // discoveryCount variable removed - not used
+
+        const tasteBased = scoredPosts.slice(0, tasteBasedCount);
+        const discovery = scoredPosts.slice(tasteBasedCount);
+        
+        // Shuffle discovery posts
+        const shuffledDiscovery = discovery.sort(() => Math.random() - 0.5);
+
+        return [...tasteBased, ...shuffledDiscovery];
+    }, [user, analyzeUserPreferences, calculatePreferenceScore]);
+
     // Move fetchPosts before useEffect calls
     const fetchPosts = useCallback(async () => {
+        try {
         setLoading(true);
+            
+            // Fetch posts with profiles and likes
         let query = supabase
             .from('posts')
             .select(`
                 *,
                 profiles!user_id (username),
-                likes (user_id),
-                comments (id)
+                    likes (user_id)
             `);
 
         if (feedType === 'following' && user && following.length > 0) {
@@ -129,12 +245,27 @@ function App() {
             query = query.gte('created_at', weekAgo.toISOString());
         }
 
-        const { data, error } = await query
+            const { data: postsData, error: postsError } = await query
             .order('created_at', { ascending: false })
             .limit(50);
         
-        if (!error && data) {
-            let transformedPosts = data.map(post => ({
+            if (postsError) throw postsError;
+
+            // Fetch comment counts
+            const { data: commentsData, error: commentsError } = await supabase
+                .from('comments')
+                .select('post_id');
+
+            if (commentsError) throw commentsError;
+
+            // Count comments per post
+            const commentCounts = commentsData.reduce((acc, comment) => {
+                acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
+                return acc;
+            }, {});
+
+            // Format posts
+            let transformedPosts = postsData.map(post => ({
                 id: post.id,
                 userId: post.user_id,
                 username: post.profiles?.username || 'Unknown',
@@ -146,8 +277,8 @@ function App() {
                 likes: post.likes?.length || 0,
                 timestamp: post.created_at,
                 likedBy: post.likes?.map(like => like.user_id) || [],
-                commentCount: post.comments?.length || 0,
-                engagement: (post.likes?.length || 0) + (post.comments?.length || 0)
+                commentCount: commentCounts[post.id] || 0,
+                engagement: (post.likes?.length || 0) + (commentCounts[post.id] || 0)
             }));
 
             // Smart explore algorithm: 70% taste-based, 30% discovery
@@ -159,14 +290,30 @@ function App() {
             }
 
             setPosts(transformedPosts);
-        }
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+        } finally {
         setLoading(false);
-    }, [feedType, following, user]);
+        }
+    }, [feedType, following, user, generateSmartExploreFeed]);
 
     // Fetch posts from Supabase
     useEffect(() => {
         fetchPosts();
     }, [fetchPosts]);
+
+    const fetchFollowing = useCallback(async () => {
+        if (!user) return;
+
+        const { data } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', user.id);
+
+        if (data) {
+            setFollowing(data.map(f => f.following_id));
+        }
+    }, [user]);
 
     // Fetch following when user logs in
     useEffect(() => {
@@ -189,8 +336,286 @@ function App() {
         };
     }, [fetchPosts]);
 
+    // Realtime updates for comments
+    useEffect(() => {
+        const commentsChannel = supabase
+            .channel('comments-channel')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'comments' },
+                async (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        // Fetch the new comment with user info
+                        const { data } = await supabase
+                            .from('comments')
+                            .select(`
+                                *,
+                                profiles:user_id (username)
+                            `)
+                            .eq('id', payload.new.id)
+                            .single();
+
+                        if (data) {
+                            const newComment = {
+                                id: data.id,
+                                postId: data.post_id,
+                                userId: data.user_id,
+                                username: data.profiles?.username || 'Anonymous',
+                                content: data.content,
+                                timestamp: new Date(data.created_at).toLocaleString()
+                            };
+
+                            setComments(prev => ({
+                                ...prev,
+                                [data.post_id]: [...(prev[data.post_id] || []), newComment]
+                            }));
+
+                            // Update comment count
+                            setPosts(prevPosts => 
+                                prevPosts.map(post => 
+                                    post.id === data.post_id 
+                                        ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+                                        : post
+                                )
+                            );
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(commentsChannel);
+        };
+    }, []);
+
     // Helper Functions
     // generateId function removed - using Supabase auto-generated IDs
+
+    const getLogoSvg = () => (
+        <svg width="120" height="40" viewBox="0 0 120 40" fill="currentColor">
+            <path d="M 20 10 L 20 30 Q 20 35, 25 35 Q 30 35, 30 30 L 30 10 Q 30 5, 35 5 Q 40 5, 40 10 L 40 30 Q 40 35, 45 35 Q 50 35, 50 30 L 50 10" stroke="currentColor" strokeWidth="2" fill="none"/>
+            <path d="M 60 10 L 60 30 Q 60 35, 65 35 Q 70 35, 70 30 L 70 10 Q 70 5, 75 5 Q 80 5, 80 10 L 80 30 Q 80 35, 85 35 Q 90 35, 90 30 L 90 10 Q 90 5, 95 5 Q 100 5, 100 10 L 100 30 Q 100 35, 105 35 Q 110 35, 110 30 L 110 10 Q 110 5, 115 5 Q 120 5, 120 10 L 120 30 Q 120 35, 125 35 Q 130 35, 130 30 L 130 10 Q 130 5, 135 5 Q 140 5, 140 10 L 140 30 Q 140 35, 145 35 Q 150 35, 150 30 L 150 10 Q 150 5, 155 5 Q 160 5, 160 10 L 160 30 Q 160 35, 165 35 Q 170 35, 170 30 L 170 10" stroke="currentColor" strokeWidth="2" fill="none"/>
+        </svg>
+    );
+
+    // CommentThread Component
+    const CommentThread = ({ comment, depth = 0 }) => {
+        // Safety check
+        if (!comment) {
+            return <div>Error: Invalid comment</div>;
+        }
+        
+        const isCollapsed = collapsedThreads.has(comment.id);
+        const hasReplies = comment.replies && comment.replies.length > 0;
+        const maxDepth = 5;
+        const shouldIndent = depth > 0 && depth <= maxDepth;
+
+        const handleReply = () => {
+            setReplyingTo(comment.id);
+            setReplyTexts(prev => ({
+                ...prev,
+                [comment.id]: ''
+            }));
+        };
+
+        const handleReplySubmit = () => {
+            const replyText = replyTexts[comment.id];
+            if (replyText && replyText.trim()) {
+                postComment(selectedPostComments.id, comment.id, replyText);
+            }
+        };
+
+        const toggleCollapse = () => {
+            setCollapsedThreads(prev => {
+                const newSet = new Set(prev);
+                if (newSet.has(comment.id)) {
+                    newSet.delete(comment.id);
+                } else {
+                    newSet.add(comment.id);
+                }
+                return newSet;
+            });
+        };
+
+        return (
+            <div 
+                className={`comment-thread ${shouldIndent ? 'indented' : ''}`}
+                style={{ marginLeft: shouldIndent ? `${Math.min(depth, maxDepth) * 20}px` : '0' }}
+            >
+                <div className="comment">
+                    <div className="comment-voting">
+                        <button 
+                            className={`vote-btn upvote ${comment.userVote === 'upvote' ? 'active' : ''}`}
+                            onClick={() => voteComment(comment.id, 'upvote')}
+                        >
+                            ▲
+                        </button>
+                        <span className="comment-score">{comment.score || 0}</span>
+                        <button 
+                            className={`vote-btn downvote ${comment.userVote === 'downvote' ? 'active' : ''}`}
+                            onClick={() => voteComment(comment.id, 'downvote')}
+                        >
+                            ▼
+                        </button>
+                    </div>
+                    
+                    <div className="comment-content-wrapper">
+                        <div className="comment-header">
+                            <span className="comment-username">@{comment.username}</span>
+                            <span className="comment-timestamp">{comment.timestamp}</span>
+                            {hasReplies && (
+                                <button 
+                                    className="collapse-btn"
+                                    onClick={toggleCollapse}
+                                >
+                                    {isCollapsed ? '▶' : '▼'}
+                                </button>
+                            )}
+                        </div>
+                        <p className="comment-content">{comment.content}</p>
+                        <div className="comment-actions">
+                            <button 
+                                className="reply-btn"
+                                onClick={handleReply}
+                            >
+                                Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Reply input */}
+                {replyingTo === comment.id && (
+                    <div className="reply-input-section">
+                        <input
+                            type="text"
+                            placeholder="Write a reply..."
+                            value={replyTexts[comment.id] || ''}
+                            onChange={(e) => setReplyTexts(prev => ({
+                                ...prev,
+                                [comment.id]: e.target.value
+                            }))}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleReplySubmit();
+                                }
+                            }}
+                            className="reply-input"
+                            autoFocus
+                        />
+                        <div className="reply-actions">
+                            <button 
+                                onClick={handleReplySubmit}
+                                className="reply-submit-button"
+                                disabled={!replyTexts[comment.id]?.trim()}
+                            >
+                                Reply
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setReplyingTo(null);
+                                    setReplyTexts(prev => ({
+                                        ...prev,
+                                        [comment.id]: ''
+                                    }));
+                                }}
+                                className="reply-cancel-button"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Nested replies */}
+                {hasReplies && !isCollapsed && (
+                    <div className="comment-replies">
+                        {comment.replies.map(reply => (
+                            <CommentThread 
+                                key={reply.id} 
+                                comment={reply} 
+                                depth={depth + 1} 
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Comments Modal Component
+    const CommentsModal = () => {
+        if (!showComments || !selectedPostComments) return null;
+
+        const postComments = comments[selectedPostComments.id] || [];
+
+        return (
+            <div className="modal-overlay" onClick={() => setShowComments(false)}>
+                <div className="modal-content comments-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h2>Comments</h2>
+                        <button className="close-button" onClick={() => setShowComments(false)}>✕</button>
+                    </div>
+                    
+                    <div className="comments-post-info">
+                        <span className="username">@{selectedPostComments.username}</span>
+                        <p className="caption">{selectedPostComments.caption}</p>
+                    </div>
+
+                    <div className="comments-list">
+                        {loadingComments ? (
+                            <div className="loading">Loading comments...</div>
+                        ) : postComments.length === 0 ? (
+                            <div className="no-comments">No comments yet. Be the first!</div>
+                        ) : (
+                            <div>
+                                <div>Found {postComments.length} comments</div>
+                                {postComments.map(comment => {
+                                    try {
+                                        return <CommentThread key={comment.id} comment={comment} />;
+                                    } catch (error) {
+                                        console.error('Error rendering comment:', error, comment);
+                                        return (
+                                            <div key={comment.id} className="comment">
+                                                <div className="comment-header">
+                                                    <span className="comment-username">@{comment.username}</span>
+                                                    <span className="comment-timestamp">{comment.timestamp}</span>
+                                                </div>
+                                                <p className="comment-content">{comment.content}</p>
+                                            </div>
+                                        );
+                                    }
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="comment-input-section">
+                        <input
+                            type="text"
+                            placeholder="Add a comment..."
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    postComment(selectedPostComments.id);
+                                }
+                            }}
+                            className="comment-input"
+                        />
+                        <button 
+                            onClick={() => postComment(selectedPostComments.id)}
+                            className="comment-submit-button"
+                            disabled={!commentText.trim()}
+                        >
+                            Post
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     const getInitial = (username) => {
         return username ? username[0].toUpperCase() : '?';
@@ -338,19 +763,6 @@ function App() {
         setView('feed');
     };
 
-    const fetchFollowing = useCallback(async () => {
-        if (!user) return;
-
-        const { data } = await supabase
-            .from('follows')
-            .select('following_id')
-            .eq('follower_id', user.id);
-
-        if (data) {
-            setFollowing(data.map(f => f.following_id));
-        }
-    }, [user]);
-
     const toggleFollow = async (userId) => {
         if (!user) {
             setView('auth');
@@ -377,102 +789,6 @@ function App() {
 
             setFollowing([...following, userId]);
         }
-    };
-
-    const generateSmartExploreFeed = async (posts) => {
-        if (!user) return posts;
-
-        // Get user's viewing patterns
-        const { data: viewPatterns } = await supabase
-            .from('view_patterns')
-            .select('post_id, view_duration')
-            .eq('user_id', user.id)
-            .gte('view_duration', 2000); // Only consider views longer than 2 seconds
-
-        if (!viewPatterns || viewPatterns.length === 0) {
-            // No patterns yet, return engagement-sorted posts
-            return posts.sort((a, b) => b.engagement - a.engagement);
-        }
-
-        // Analyze user preferences
-        const userPreferences = analyzeUserPreferences(posts, viewPatterns);
-        
-        // Score posts based on preferences
-        const scoredPosts = posts.map(post => ({
-            ...post,
-            preferenceScore: calculatePreferenceScore(post, userPreferences)
-        }));
-
-        // Sort by preference score
-        scoredPosts.sort((a, b) => b.preferenceScore - a.preferenceScore);
-
-        // Mix 70% taste-based with 30% random discovery
-        const tasteBasedCount = Math.floor(posts.length * 0.7);
-        // discoveryCount variable removed - not used
-
-        const tasteBased = scoredPosts.slice(0, tasteBasedCount);
-        const discovery = scoredPosts.slice(tasteBasedCount);
-        
-        // Shuffle discovery posts
-        const shuffledDiscovery = discovery.sort(() => Math.random() - 0.5);
-
-        return [...tasteBased, ...shuffledDiscovery];
-    };
-
-    const analyzeUserPreferences = (posts, viewPatterns) => {
-        const preferences = {
-            brands: new Map(),
-            silhouettes: new Map(),
-            colorMoods: new Map()
-        };
-
-        // Analyze viewed posts
-        viewPatterns.forEach(pattern => {
-            const post = posts.find(p => p.id === pattern.post_id);
-            if (!post) return;
-
-            // Track brand preferences
-            Object.values(post.clothingItems).forEach(brand => {
-                preferences.brands.set(brand, (preferences.brands.get(brand) || 0) + pattern.view_duration);
-            });
-
-            // Simple silhouette detection (placeholder)
-            const isOversized = post.caption?.toLowerCase().includes('oversized') || 
-                               post.caption?.toLowerCase().includes('baggy');
-            const silhouette = isOversized ? 'oversized' : 'fitted';
-            preferences.silhouettes.set(silhouette, (preferences.silhouettes.get(silhouette) || 0) + pattern.view_duration);
-
-            // Simple color mood detection (placeholder)
-            const isMonochrome = post.caption?.toLowerCase().includes('monochrome') || 
-                               post.caption?.toLowerCase().includes('black and white');
-            const colorMood = isMonochrome ? 'monochrome' : 'colorful';
-            preferences.colorMoods.set(colorMood, (preferences.colorMoods.get(colorMood) || 0) + pattern.view_duration);
-        });
-
-        return preferences;
-    };
-
-    const calculatePreferenceScore = (post, preferences) => {
-        let score = 0;
-
-        // Brand affinity
-        Object.values(post.clothingItems).forEach(brand => {
-            score += preferences.brands.get(brand) || 0;
-        });
-
-        // Silhouette preference
-        const isOversized = post.caption?.toLowerCase().includes('oversized') || 
-                           post.caption?.toLowerCase().includes('baggy');
-        const silhouette = isOversized ? 'oversized' : 'fitted';
-        score += preferences.silhouettes.get(silhouette) || 0;
-
-        // Color mood preference
-        const isMonochrome = post.caption?.toLowerCase().includes('monochrome') || 
-                           post.caption?.toLowerCase().includes('black and white');
-        const colorMood = isMonochrome ? 'monochrome' : 'colorful';
-        score += preferences.colorMoods.get(colorMood) || 0;
-
-        return score;
     };
 
     const createPost = async (postData) => {
@@ -522,12 +838,370 @@ function App() {
         }
     };
 
-    const getLogoSvg = () => (
-        <svg width="120" height="40" viewBox="0 0 120 40" fill="currentColor">
-            <path d="M 20 10 L 20 30 Q 20 35, 25 35 Q 30 35, 30 30 L 30 10 Q 30 5, 35 5 Q 40 5, 40 10 L 40 30 Q 40 35, 45 35 Q 50 35, 50 30 L 50 10" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <path d="M 60 10 L 60 30 Q 60 35, 65 35 Q 70 35, 70 30 L 70 10 Q 70 5, 75 5 Q 80 5, 80 10 L 80 30 Q 80 35, 85 35 Q 90 35, 90 30 L 90 10 Q 90 5, 95 5 Q 100 5, 100 10 L 100 30 Q 100 35, 105 35 Q 110 35, 110 30 L 110 10 Q 110 5, 115 5 Q 120 5, 120 10 L 120 30 Q 120 35, 125 35 Q 130 35, 130 30 L 130 10" stroke="currentColor" strokeWidth="2" fill="none"/>
-        </svg>
-    );
+    // Comments functions
+    const fetchComments = async (postId) => {
+        try {
+            setLoadingComments(true);
+            const { data, error } = await supabase
+                .from('comments')
+                .select(`
+                    *,
+                    profiles:user_id (username)
+                `)
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching comments:', error);
+                throw error;
+            }
+            
+
+            // Build nested tree structure
+            const commentMap = new Map();
+            const rootComments = [];
+            
+            // If no comments, return empty array
+            if (!data || data.length === 0) {
+                setComments(prev => ({
+                    ...prev,
+                    [postId]: []
+                }));
+                return [];
+            }
+
+            // First pass: create comment objects and track user votes
+            data.forEach(comment => {
+                const userVote = comment.comment_votes?.find(vote => vote.user_id === user?.id);
+                
+                const commentObj = {
+                    id: comment.id,
+                    postId: comment.post_id,
+                    userId: comment.user_id,
+                    username: comment.profiles?.username || 'Anonymous',
+                    content: comment.content,
+                    timestamp: new Date(comment.created_at).toLocaleString(),
+                    parentId: comment.parent_id || null,
+                    depth: comment.depth || 0,
+                    path: comment.path || [],
+                    upvotes: comment.upvotes || 0,
+                    downvotes: comment.downvotes || 0,
+                    score: (comment.upvotes || 0) - (comment.downvotes || 0),
+                    userVote: userVote?.vote_type || null,
+                    replies: []
+                };
+                
+
+                commentMap.set(comment.id, commentObj);
+                
+                // Track user votes
+                if (userVote) {
+                    setCommentVotes(prev => ({
+                        ...prev,
+                        [comment.id]: userVote.vote_type
+                    }));
+                }
+            });
+
+            // Second pass: build tree structure
+            commentMap.forEach(comment => {
+                if (comment.parentId) {
+                    const parent = commentMap.get(comment.parentId);
+                    if (parent) {
+                        parent.replies.push(comment);
+                    } else {
+                        // If parent not found, treat as root comment
+                        rootComments.push(comment);
+                    }
+                } else {
+                    rootComments.push(comment);
+                }
+            });
+
+            // Sort replies by score
+            const sortComments = (comments) => {
+                comments.sort((a, b) => b.score - a.score);
+                comments.forEach(comment => {
+                    if (comment.replies.length > 0) {
+                        sortComments(comment.replies);
+                    }
+                });
+            };
+            sortComments(rootComments);
+
+            setComments(prev => ({
+                ...prev,
+                [postId]: rootComments
+            }));
+            
+            return rootComments;
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            return [];
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    const postComment = async (postId, parentId = null, replyText = null) => {
+        const text = replyText || commentText;
+        if (!text.trim()) return;
+        
+        try {
+            let parentComment = null;
+            let depth = 0;
+            let path = [];
+
+            if (parentId) {
+                // Find parent comment to calculate depth and path
+                const findParent = (comments) => {
+                    for (const comment of comments) {
+                        if (comment.id === parentId) {
+                            return comment;
+                        }
+                        if (comment.replies.length > 0) {
+                            const found = findParent(comment.replies);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                parentComment = findParent(comments[postId] || []);
+                if (parentComment) {
+                    depth = parentComment.depth + 1;
+                    path = [...(parentComment.path || []), parentId];
+                }
+            }
+
+            const { data, error } = await supabase
+                .from('comments')
+                .insert({
+                    post_id: postId,
+                    user_id: user.id,
+                    content: text.trim(),
+                    parent_id: parentId,
+                    depth: depth,
+                    path: path
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Add the new comment to state immediately
+            const newComment = {
+                id: data.id,
+                postId: data.post_id,
+                userId: data.user_id,
+                username: user.username,
+                content: data.content,
+                timestamp: new Date(data.created_at).toLocaleString(),
+                parentId: data.parent_id,
+                depth: data.depth,
+                path: data.path,
+                upvotes: 0,
+                downvotes: 0,
+                score: 0,
+                userVote: null,
+                replies: []
+            };
+
+            // Add to tree structure
+            if (parentId && parentComment) {
+                // Add as reply to parent
+                const addToTree = (comments) => {
+                    for (const comment of comments) {
+                        if (comment.id === parentId) {
+                            comment.replies.push(newComment);
+                            return true;
+                        }
+                        if (comment.replies.length > 0 && addToTree(comment.replies)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                
+                setComments(prev => {
+                    const newComments = { ...prev };
+                    if (newComments[postId]) {
+                        addToTree(newComments[postId]);
+                    }
+                    return newComments;
+                });
+            } else {
+                // Add as root comment
+                setComments(prev => ({
+                    ...prev,
+                    [postId]: [...(prev[postId] || []), newComment]
+                }));
+            }
+
+            // Clear input
+            if (replyText) {
+                setReplyTexts(prev => ({
+                    ...prev,
+                    [parentId]: ''
+                }));
+                setReplyingTo(null);
+            } else {
+                setCommentText('');
+            }
+            
+            // Update comment count in posts
+            setPosts(prevPosts => 
+                prevPosts.map(post => 
+                    post.id === postId 
+                        ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+                        : post
+                )
+            );
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            alert('Failed to post comment');
+        }
+    };
+
+    const voteComment = async (commentId, voteType) => {
+        if (!user) {
+            alert('Please sign in to vote');
+            return;
+        }
+
+        try {
+            
+            // Try RPC function first, fallback to manual voting if it doesn't exist
+            let error;
+            try {
+                const { error: rpcError } = await supabase.rpc('handle_comment_vote', {
+                    p_comment_id: commentId,
+                    p_user_id: user.id,
+                    p_vote_type: voteType
+                });
+                error = rpcError;
+            } catch (rpcError) {
+                // Fallback: Manual voting logic
+                const currentVote = commentVotes[commentId];
+                
+                if (currentVote === voteType) {
+                    // Remove vote
+                    await supabase
+                        .from('comment_votes')
+                        .delete()
+                        .eq('comment_id', commentId)
+                        .eq('user_id', user.id);
+                    
+                    // Update comment counts
+                    const updateField = voteType === 'upvote' ? 'upvotes' : 'downvotes';
+                    await supabase
+                        .from('comments')
+                        .update({ [updateField]: supabase.raw(`${updateField} - 1`) })
+                        .eq('id', commentId);
+                } else {
+                    // Add or change vote
+                    await supabase
+                        .from('comment_votes')
+                        .upsert({
+                            comment_id: commentId,
+                            user_id: user.id,
+                            vote_type: voteType
+                        });
+                    
+                    if (currentVote) {
+                        // Change vote - remove old vote count
+                        const oldField = currentVote === 'upvote' ? 'upvotes' : 'downvotes';
+                        await supabase
+                            .from('comments')
+                            .update({ [oldField]: supabase.raw(`${oldField} - 1`) })
+                            .eq('id', commentId);
+                    }
+                    
+                    // Add new vote count
+                    const newField = voteType === 'upvote' ? 'upvotes' : 'downvotes';
+                    await supabase
+                        .from('comments')
+                        .update({ [newField]: supabase.raw(`${newField} + 1`) })
+                        .eq('id', commentId);
+                }
+                error = null;
+            }
+
+            if (error) {
+                console.error('Error voting on comment:', error);
+                throw error;
+            }
+
+            // Update local state optimistically
+            setCommentVotes(prev => ({
+                ...prev,
+                [commentId]: prev[commentId] === voteType ? null : voteType
+            }));
+
+            // Update comment scores in the tree
+            const updateCommentScore = (comments) => {
+                return comments.map(comment => {
+                    if (comment.id === commentId) {
+                        const currentVote = commentVotes[commentId];
+                        const newVote = currentVote === voteType ? null : voteType;
+                        
+                        let upvoteChange = 0;
+                        let downvoteChange = 0;
+                        
+                        if (currentVote === 'upvote' && newVote === null) {
+                            upvoteChange = -1;
+                        } else if (currentVote === 'downvote' && newVote === null) {
+                            downvoteChange = -1;
+                        } else if (currentVote === 'upvote' && newVote === 'downvote') {
+                            upvoteChange = -1;
+                            downvoteChange = 1;
+                        } else if (currentVote === 'downvote' && newVote === 'upvote') {
+                            upvoteChange = 1;
+                            downvoteChange = -1;
+                        } else if (currentVote === null && newVote === 'upvote') {
+                            upvoteChange = 1;
+                        } else if (currentVote === null && newVote === 'downvote') {
+                            downvoteChange = 1;
+                        }
+
+                        return {
+                            ...comment,
+                            upvotes: Math.max(0, comment.upvotes + upvoteChange),
+                            downvotes: Math.max(0, comment.downvotes + downvoteChange),
+                            score: Math.max(0, comment.upvotes + upvoteChange) - Math.max(0, comment.downvotes + downvoteChange),
+                            userVote: newVote
+                        };
+                    }
+                    
+                    if (comment.replies.length > 0) {
+                        return {
+                            ...comment,
+                            replies: updateCommentScore(comment.replies)
+                        };
+                    }
+                    
+                    return comment;
+                });
+            };
+
+            setComments(prev => {
+                const newComments = { ...prev };
+                if (newComments[selectedPostComments?.id]) {
+                    newComments[selectedPostComments.id] = updateCommentScore(newComments[selectedPostComments.id]);
+                }
+                return newComments;
+            });
+
+        } catch (error) {
+            console.error('Error voting on comment:', error);
+            alert('Failed to vote on comment');
+        }
+    };
+
+    const openComments = async (post) => {
+        setSelectedPostComments(post);
+        setShowComments(true);
+        await fetchComments(post.id);
+    };
 
     // Main render
     if (view === 'auth' && !user) {
@@ -591,6 +1265,7 @@ function App() {
                     toggleLike={toggleLike}
                     setCurrentProfile={setCurrentProfile}
                     setView={setView}
+                    openComments={openComments}
                 />
             </div>
             <SearchModal 
@@ -609,6 +1284,7 @@ function App() {
                 BRANDS={BRANDS}
                 CATEGORIES={CATEGORIES}
             />
+            {showComments && <CommentsModal />}
         </div>
     );
 }
