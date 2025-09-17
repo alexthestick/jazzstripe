@@ -2178,7 +2178,7 @@ body.dark-mode {
   color: var(--accent, #007bff);
 }
 
-/* Fix cut-off header issue */
+/* Top Header - SIMPLIFY */
 .top-header-clean {
   position: fixed;
   top: 0;
@@ -2187,18 +2187,19 @@ body.dark-mode {
   background: var(--bg-primary, #ffffff);
   border-bottom: 1px solid var(--border-light, #e2e8f0);
   z-index: 99;
+  height: 60px; /* CHANGED - Fixed height, no calc */
   padding-top: env(safe-area-inset-top, 0);
-  min-height: calc(60px + env(safe-area-inset-top, 0)); /* Use min-height instead */
 }
 
+/* Header Content - ENSURE PROPER HEIGHT */
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 0 16px; /* CHANGED - Remove vertical padding, let container handle height */
   max-width: 600px;
   margin: 0 auto;
-  height: 60px; /* Fixed height for content */
+  height: 100%; /* CHANGED from 60px - Fill parent container */
 }
 
 .app-logo {
@@ -2234,12 +2235,12 @@ body.dark-mode {
   background: var(--bg-hover, rgba(0,0,0,0.05));
 }
 
-/* Main Content */
+/* Main Content - REDUCE TOP PADDING */
 .app-container {
   min-height: 100vh;
   background: var(--secondary, #ffffff);
-  padding-top: calc(60px + env(safe-area-inset-top, 0)); /* Account for fixed header + safe area */
-  padding-bottom: 80px; /* Account for bottom nav */
+  padding-top: 60px; /* CHANGED from calc(60px + env(safe-area-inset-top, 0)) - Remove double padding */
+  padding-bottom: 80px;
 }
 
 .main-content {
@@ -2296,13 +2297,13 @@ body.dark-mode {
   background: var(--secondary, #ffffff);
 }
 
-/* Feed Tabs */
+/* Feed Tabs - FIX STICKY POSITION */
 .feed-tabs {
   display: flex;
   background: var(--bg-primary, #ffffff);
   border-bottom: 1px solid var(--border-light, #e2e8f0);
   position: sticky;
-  top: calc(60px + env(safe-area-inset-top, 0));
+  top: 60px; /* CHANGED from calc(60px + env(safe-area-inset-top, 0)) - Should stick right under header */
   z-index: 50;
   margin-top: 0;
 }
@@ -2654,6 +2655,21 @@ body.dark-mode {
   
   .main-content {
     min-height: calc(100vh - 132px);
+  }
+}
+
+/* Additional fix for mobile devices with notch */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .top-header-clean {
+    height: calc(60px + env(safe-area-inset-top, 0));
+  }
+  
+  .app-container {
+    padding-top: calc(60px + env(safe-area-inset-top, 0));
+  }
+  
+  .feed-tabs {
+    top: calc(60px + env(safe-area-inset-top, 0));
   }
 }
 
