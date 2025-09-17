@@ -7,6 +7,8 @@
 ### 🎯 Core Discovery Features
 - **Smart Explore Algorithm** - 70% taste-based, 30% discovery mix
 - **Find Similar Vibes** - Discover posts with matching aesthetic
+- **Enhanced Posting System** - 4-stage visual tagging flow
+- **Interactive Tagging** - Drag & drop clothing item tags
 - **Post Modes** - Regular, Need Advice, Work in Progress
 - **Music-Influenced Profiles** - Vinyl, Cassette, Streaming themes
 - **Smart Brand Search** - Natural discovery with vibe matching
@@ -21,6 +23,45 @@
 - **PWA** - Install as mobile app
 - **Touch Optimized** - Large buttons, swipe-friendly
 - **Responsive** - Works on all screen sizes
+- **Enhanced Posting** - Mobile-first 4-stage posting flow
+
+### 🏷️ Visual Tagging System
+- **Interactive Tagging** - Tap clothing items to add tags
+- **Draggable Tags** - Smooth drag interactions with visual arrows
+- **Brand Selection** - Searchable brand picker with categories
+- **Multi-Photo Support** - Tag up to 5 photos per post
+- **Touch Optimized** - Mobile-friendly drag and drop
+
+## 📁 Project Structure
+
+```
+src/
+├── components/
+│   ├── posting/                 # Enhanced posting system
+│   │   ├── PostCreationFlow.jsx     # Main flow controller
+│   │   ├── PhotoCaptureStage.jsx    # Stage 1: Photo capture
+│   │   ├── VisualTaggingStage.jsx   # Stage 2: Visual tagging
+│   │   ├── DraggableTag.jsx         # Draggable tag component
+│   │   ├── BrandSelector.jsx        # Brand selection modal
+│   │   ├── MetadataStage.jsx        # Stage 3: Metadata input
+│   │   └── PreviewStage.jsx         # Stage 4: Preview & post
+│   ├── BottomNavigation.jsx     # Mobile bottom nav
+│   ├── TopHeader.jsx           # Clean header component
+│   ├── HomeFeed.jsx            # Main feed component
+│   ├── SearchPage.jsx          # Search page
+│   ├── ActivityFeed.jsx        # Activity feed
+│   ├── UserProfile.jsx         # User profile page
+│   └── [other components]      # Legacy components
+├── lib/
+│   └── supabase.js             # Supabase configuration
+├── hooks/
+│   └── useIsMobile.js          # Mobile detection hook
+├── styles/
+│   └── modals/                 # Modal-specific styles
+├── App.jsx                     # Main app component
+├── App.css                     # Global styles
+└── index.js                    # App entry point
+```
 
 ## 🚀 Quick Start
 

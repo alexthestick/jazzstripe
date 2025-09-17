@@ -1,0 +1,822 @@
+/* Reddit-Style Mobile Comments Design */
+
+/* Main Comments Container */
+.mobile-comments-container {
+  padding: 0;
+  padding-bottom: 80px; /* Space for sticky input */
+  background: var(--bg-primary, #ffffff);
+  min-height: calc(100vh - 200px);
+}
+
+.mobile-comments-container h3 {
+  padding: 16px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+  background: var(--bg-primary, #ffffff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Comments List - High Density */
+.comments-modal-comments-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual Comment Thread - Compact */
+.comments-modal-thread-container {
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  background: var(--bg-primary, #ffffff);
+}
+
+.comments-modal-thread-container:last-child {
+  border-bottom: none;
+}
+
+/* Comment Content Layout - Reddit Style */
+.comments-modal-comment-content {
+  display: flex;
+  padding: 8px 12px;
+  gap: 8px;
+  min-height: 48px;
+}
+
+/* Left Vote Column */
+.comment-vote-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 32px;
+  padding-top: 2px;
+}
+
+.vote-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-muted, #94a3b8);
+  font-size: 16px;
+  line-height: 1;
+  min-height: 32px;
+  min-width: 32px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.vote-btn:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+.vote-btn.upvote.active {
+  color: var(--orange, #ff4500);
+  background: rgba(255, 69, 0, 0.1);
+}
+
+.vote-btn.downvote.active {
+  color: var(--blue, #0079d3);
+  background: rgba(0, 121, 211, 0.1);
+}
+
+.vote-score {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  margin: 2px 0;
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.vote-score.upvoted {
+  color: var(--orange, #ff4500);
+}
+
+.vote-score.downvoted {
+  color: var(--blue, #0079d3);
+}
+
+/* Comment Content Area */
+.comment-content-area {
+  flex: 1;
+  min-width: 0; /* Prevent overflow */
+}
+
+/* Comment Header - Compact */
+.comments-modal-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.comments-modal-username {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.comment-separator {
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+}
+
+.comments-modal-timestamp {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 400;
+}
+
+.comments-modal-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: auto;
+  min-height: 24px;
+}
+
+.comments-modal-collapse-btn:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+/* Comment Text - Readable */
+.comments-modal-comment-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-primary, #1a1a1a);
+  margin-bottom: 6px;
+  word-wrap: break-word;
+}
+
+/* Comment Actions - Minimal */
+.comments-modal-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.comments-modal-reply-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-height: 28px;
+  transition: all 0.15s ease;
+}
+
+.comments-modal-reply-btn:hover {
+  background: var(--bg-hover, #f8fafc);
+  color: var(--text-secondary, #64748b);
+}
+
+/* Threading - Clean Left Border */
+.comments-modal-replies {
+  margin-left: 20px;
+  border-left: 2px solid var(--border-thread, #e2e8f0);
+}
+
+.comments-modal-replies .comments-modal-thread-container {
+  border-bottom: none;
+}
+
+.comments-modal-replies .comments-modal-comment-content {
+  padding-left: 8px;
+}
+
+/* Limit threading depth to 3 levels */
+.comments-modal-replies .comments-modal-replies .comments-modal-replies {
+  margin-left: 0;
+  border-left: none;
+}
+
+/* Sticky Comment Input - Bottom Fixed */
+.sticky-comment-input {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary, #ffffff);
+  border-top: 1px solid var(--border, #e2e8f0);
+  padding: 12px 16px;
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+}
+
+.sticky-input-container {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.sticky-comment-input input {
+  flex: 1;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 14px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1a1a1a);
+  outline: none;
+  transition: all 0.2s ease;
+  min-height: 20px;
+  resize: none;
+  max-height: 80px;
+}
+
+.sticky-comment-input input:focus {
+  border-color: var(--accent, #0079d3);
+  background: var(--bg-primary, #ffffff);
+}
+
+.sticky-post-btn {
+  background: var(--accent, #0079d3);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.sticky-post-btn:disabled {
+  background: var(--text-muted, #94a3b8);
+  cursor: not-allowed;
+}
+
+.sticky-post-btn:not(:disabled):hover {
+  background: var(--accent-hover, #0066cc);
+}
+
+/* Reply Context Banner */
+.reply-context {
+  background: var(--bg-secondary, #f8fafc);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-context-cancel {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 16px;
+  min-height: 24px;
+  min-width: 24px;
+}
+
+/* No Comments State */
+.no-comments {
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  padding: 60px 20px;
+  font-style: italic;
+}
+
+/* Error Message - Subtle */
+.error-message {
+  background: var(--error-bg, #fef2f2);
+  border-left: 3px solid var(--error, #ef4444);
+  color: var(--error, #ef4444);
+  padding: 12px 16px;
+  margin: 0 16px 16px 16px;
+  font-size: 13px;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Dark Mode */
+[data-theme="dark"], .dark-mode {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #262626;
+  --bg-hover: rgba(255,255,255,0.05);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #404040;
+  --border-light: #333333;
+  --border-thread: #404040;
+  --orange: #ff6b35;
+  --blue: #4a9eff;
+  --accent: #4a9eff;
+  --accent-hover: #357ae8;
+  --error: #f87171;
+  --error-bg: #3f1f1f;
+}
+
+/* Loading States */
+.comment-skeleton {
+  display: flex;
+  padding: 8px 12px;
+  gap: 8px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-vote {
+  width: 32px;
+  height: 60px;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 4px;
+}
+
+.skeleton-content {
+  flex: 1;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-line.medium {
+  width: 80%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* === REDDIT-STYLE COMMENT SYSTEM === */
+
+/* FIX 4: IMPROVED COMMENT SPACING */
+.comment-thread-reddit {
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  background: var(--bg-primary, #ffffff);
+  /* Consistent padding */
+}
+
+.comment-content-reddit {
+  display: flex;
+  padding: 6px 12px; /* Reduced from 8px for tighter layout */
+  gap: 8px;
+  min-height: 44px; /* Ensure touch target minimum */
+  align-items: flex-start;
+}
+
+/* FIX 5: CONSISTENT LEFT COLUMN */
+.comment-left-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32px; /* Slightly wider for better alignment */
+  flex-shrink: 0;
+  padding-top: 2px; /* Small offset to align with text */
+}
+
+.comment-profile-mini {
+  width: 20px; /* Reduced from 24px */
+  height: 20px;
+  border-radius: 10px;
+  background: var(--accent, #0079d3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px; /* Reduced font size */
+  font-weight: 600;
+  margin-bottom: 6px; /* Increased margin for separation */
+}
+
+/* FIX 2: VOTE ARROW ALIGNMENT - Ensure perfect centering */
+.comment-vote-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* Changed from center */
+  gap: 1px; /* Reduced gap for tighter alignment */
+  width: 24px; /* Fixed width for consistency */
+}
+
+.vote-arrow {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px; /* Increased from 12px for visibility */
+  padding: 3px; /* Increased padding for better touch target */
+  cursor: pointer;
+  border-radius: 3px;
+  min-height: 24px; /* Consistent minimum touch target */
+  min-width: 24px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* Ensure proper text centering */
+}
+
+.vote-arrow:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+.vote-arrow.up.active {
+  color: var(--orange, #ff4500);
+  background: rgba(255, 69, 0, 0.1);
+}
+
+.vote-arrow.down.active {
+  color: var(--blue, #0079d3);
+  background: rgba(0, 121, 211, 0.1);
+}
+
+.vote-score-reddit {
+  font-size: 11px; /* Slightly larger for readability */
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  min-width: 24px;
+  text-align: center;
+  line-height: 1.2;
+  padding: 1px 0; /* Small padding for visual balance */
+}
+
+.vote-score-reddit.up {
+  color: var(--orange, #ff4500);
+}
+
+.vote-score-reddit.down {
+  color: var(--blue, #0079d3);
+}
+
+/* Comment body */
+.comment-body-reddit {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-header-reddit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.username-reddit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.op-badge {
+  background: var(--accent, #0079d3);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.replied-badge {
+  font-size: 10px;
+}
+
+.timestamp-reddit {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.collapse-toggle-reddit {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  margin-left: auto;
+  min-height: 24px;
+}
+
+.collapse-toggle-reddit:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+.comment-text-reddit {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-primary, #1a1a1a);
+  margin-bottom: 6px;
+  word-wrap: break-word;
+}
+
+/* Rich text styling */
+.rich-text-content strong {
+  font-weight: 600;
+}
+
+.rich-text-content em {
+  font-style: italic;
+}
+
+.user-mention {
+  color: var(--accent, #0079d3);
+  font-weight: 500;
+}
+
+.brand-mention {
+  background: var(--brand-bg, #f0f0f0);
+  color: var(--brand-text, #333);
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Awards */
+.comment-awards {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.award-display {
+  background: var(--award-bg, #fff3cd);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  border: 1px solid var(--award-border, #ffeaa7);
+}
+
+/* Actions */
+.comment-actions-reddit {
+  display: flex;
+  gap: 8px;
+  position: relative;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 28px;
+  transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+  background: var(--bg-hover, #f8fafc);
+  color: var(--text-secondary, #64748b);
+}
+
+.award-menu {
+  position: absolute;
+  top: 32px;
+  left: 40px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+  min-width: 120px;
+}
+
+.award-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.award-option:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+/* FIX 3: COMPACT COMMENT INPUT - Remove rich text hints */
+.sticky-input-improved {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary, #ffffff);
+  border-top: 1px solid var(--border, #e2e8f0);
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  /* Ensure safe area support */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.reply-context-visible {
+  padding: 6px 16px; /* Reduced padding */
+  background: var(--bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.reply-context-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px; /* Reduced margin */
+}
+
+.reply-context-header span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.cancel-reply {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  min-height: 24px;
+  min-width: 24px;
+}
+
+.reply-context-preview {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.3;
+}
+
+.input-container-improved {
+  display: flex;
+  padding: 8px 16px; /* Reduced from previous padding */
+  gap: 8px;
+  align-items: center; /* Changed from flex-end */
+}
+
+.comment-input-textarea {
+  flex: 1;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  padding: 8px 16px; /* Reduced vertical padding */
+  font-size: 14px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1a1a1a);
+  outline: none;
+  resize: none;
+  overflow-y: hidden; /* Prevent scroll in single line mode */
+  font-family: inherit;
+  min-height: 36px; /* Reduced from 40px */
+  max-height: 100px; /* Limit expansion */
+  line-height: 1.4;
+}
+
+.comment-input-textarea:focus {
+  border-color: var(--accent, #0079d3);
+  background: var(--bg-primary, #ffffff);
+}
+
+.submit-btn-improved {
+  background: var(--accent, #0079d3);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px; /* Reduced padding */
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px; /* Reduced from 40px */
+  transition: all 0.2s ease;
+}
+
+.submit-btn-improved:disabled {
+  background: var(--text-muted, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* REMOVE: Rich text formatting hints completely */
+.formatting-hints {
+  display: none; /* Hide rich text hints */
+}
+
+/* Nested replies */
+.comment-replies-reddit {
+  margin-left: 32px;
+  border-left: 1px solid var(--border-light, #f1f5f9);
+  padding-left: 8px;
+}
+
+/* Dark mode updates */
+[data-theme="dark"], .dark-mode {
+  --orange: #ff6b35;
+  --blue: #4a9eff;
+  --brand-bg: #2d2d2d;
+  --brand-text: #e0e0e0;
+  --award-bg: #3d3d3d;
+  --award-border: #555;
+}
+
+/* FIX 8: PREVENT LAYOUT SHIFTS */
+.mobile-comments-container {
+  /* Prevent scroll performance issues */
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0; /* Remove extra padding */
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .comment-vote-column {
+    width: 28px;
+  }
+  
+  .vote-btn {
+    font-size: 14px;
+    min-height: 28px;
+    min-width: 28px;
+  }
+  
+  .comments-modal-comment-text {
+    font-size: 13px;
+  }
+  
+  .sticky-comment-input {
+    padding: 8px 12px;
+  }
+
+  /* Reddit-style mobile optimizations */
+  .comment-left-column {
+    width: 32px;
+  }
+
+  .comment-profile-mini {
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .vote-arrow {
+    font-size: 11px;
+    min-height: 18px;
+    min-width: 18px;
+  }
+
+  .comment-text-reddit {
+    font-size: 12px;
+  }
+
+  .action-btn {
+    font-size: 10px;
+    padding: 3px 5px;
+    min-height: 24px;
+  }
+
+  .sticky-input-improved {
+    padding: 6px 12px;
+  }
+
+  .comment-input-textarea {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .submit-btn-improved {
+    font-size: 13px;
+    padding: 8px 16px;
+    min-height: 36px;
+  }
+}

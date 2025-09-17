@@ -15,7 +15,6 @@ const Post = ({
 }) => {
     const isLiked = user && post.likedBy.includes(user.id);
     const [showComments, setShowComments] = useState(false);
-    const [commentCount, setCommentCount] = useState(post.commentCount || 0);
     const [showMenu, setShowMenu] = useState(false);
     const [similarPosts, setSimilarPosts] = useState([]);
     const [showSimilar, setShowSimilar] = useState(false);
