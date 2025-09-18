@@ -324,38 +324,51 @@ body {
   margin: 0;
 }
 
-/* Flexible image container - adapts to image aspect ratio */
+/* FIX 2: CONSISTENT IMAGE DISPLAY SYSTEM */
+
+/* Base post container - no forced aspect ratio */
+.post {
+  background: var(--secondary, #ffffff);
+  border-bottom: 1px solid var(--border, #e0e0e0);
+  margin-bottom: 0;
+}
+
+/* MAIN FEED: Flexible image containers */
 .post-image-container {
   position: relative;
   width: 100%;
   margin: 0;
-  /* Remove fixed aspect-ratio */
-  max-height: 600px; /* Maximum height like Instagram */
-  overflow: hidden;
-  background: #000; /* Black background for letterboxing */
+  /* REMOVED: All height constraints for feed view */
+  background: #000;
+  /* Let images determine their own height within reason */
+  max-height: none; /* FIXED: Remove arbitrary height limits */
+  overflow: visible; /* FIXED: Don't crop */
 }
 
-.post-image-full,
+/* Feed images - preserve aspect ratio */
 .post-image {
   width: 100%;
-  height: auto; /* Let height be automatic based on image */
-  max-height: 600px; /* Prevent extremely tall images */
-  object-fit: contain; /* Show full image with letterboxing if needed */
+  height: auto; /* CRITICAL: Let image determine height */
+  max-height: 80vh; /* REASONABLE: Prevent extremely tall images */
+  object-fit: contain; /* FIXED: Show full image always */
   display: block;
+  background: #000; /* Black letterboxing if needed */
 }
 
-/* For portrait images */
-@media (min-aspect-ratio: 1/1) {
-  .post-image-container {
-    max-height: 500px;
-  }
+/* POST PAGE: Full image display */
+.post-image-full {
+  width: 100%;
+  height: auto; /* CRITICAL: Let image determine height */
+  max-height: none; /* FIXED: No height restrictions on post page */
+  object-fit: contain; /* FIXED: Always show full image */
+  display: block;
+  background: #000;
 }
 
-/* For landscape images */
-@media (max-aspect-ratio: 1/1) {
-  .post-image-container {
-    max-height: 400px;
-  }
+/* SPECIFIC FIX: Post page image container */
+.post-page .post-image-container {
+  max-height: none; /* CRITICAL: No height limits on individual post view */
+  overflow: visible;
 }
 
 .brand-reveal-overlay {
@@ -1361,10 +1374,20 @@ body.dark-mode {
     background-color: #333;
 }
 
+/* FIX 7: POST PAGE SPECIFIC STYLES */
 .post-page-content {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0; /* SIMPLIFIED: Remove conflicting padding */
+}
+
+/* Ensure post page images show fully */
+.post-page .post-full .post-image,
+.post-page .post-image-full {
+  max-height: none; /* CRITICAL: No height restrictions */
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .post-full {
@@ -2178,7 +2201,11 @@ body.dark-mode {
   color: var(--accent, #007bff);
 }
 
-/* Top Header - SIMPLIFY */
+/* ==========================================================================
+   JAZZSTRIPE HEADER AND IMAGE DISPLAY FIXES
+   ========================================================================== */
+
+/* FIX 1: HEADER SPACING - Remove double safe area calculations */
 .top-header-clean {
   position: fixed;
   top: 0;
@@ -2187,19 +2214,20 @@ body.dark-mode {
   background: var(--bg-primary, #ffffff);
   border-bottom: 1px solid var(--border-light, #e2e8f0);
   z-index: 99;
-  height: 60px; /* CHANGED - Fixed height, no calc */
+  /* SIMPLIFIED: Single height calculation that includes safe area */
+  height: calc(60px + env(safe-area-inset-top, 0));
   padding-top: env(safe-area-inset-top, 0);
 }
 
-/* Header Content - ENSURE PROPER HEIGHT */
+/* Header content - remove conflicting padding */
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px; /* CHANGED - Remove vertical padding, let container handle height */
+  padding: 12px 16px; /* FIXED: Only horizontal padding */
   max-width: 600px;
   margin: 0 auto;
-  height: 100%; /* CHANGED from 60px - Fill parent container */
+  height: 60px; /* FIXED: Content area is always 60px regardless of safe area */
 }
 
 .app-logo {
@@ -2235,19 +2263,29 @@ body.dark-mode {
   background: var(--bg-hover, rgba(0,0,0,0.05));
 }
 
-/* Main Content - REDUCE TOP PADDING */
+/* App container - account for dynamic header height */
 .app-container {
   min-height: 100vh;
   background: var(--secondary, #ffffff);
-  padding-top: 60px; /* CHANGED from calc(60px + env(safe-area-inset-top, 0)) - Remove double padding */
+  padding-top: calc(60px + env(safe-area-inset-top, 0)); /* FIXED: Match header height exactly */
   padding-bottom: 80px;
 }
 
+/* FIX 6: ENSURE CONSISTENT SPACING */
 .main-content {
   max-width: 600px;
   margin: 0 auto;
   min-height: calc(100vh - 140px);
   background: var(--secondary, #ffffff);
+  padding-top: 0; /* CRITICAL: No additional top padding */
+}
+
+.home-feed,
+.feed-content,
+.feed-container {
+  background: var(--secondary, #ffffff);
+  margin-top: 0; /* CRITICAL: No additional top margin */
+  padding-top: 0; /* CRITICAL: No additional top padding */
 }
 
 /* Home Feed */
@@ -2297,15 +2335,15 @@ body.dark-mode {
   background: var(--secondary, #ffffff);
 }
 
-/* Feed Tabs - FIX STICKY POSITION */
+/* Feed tabs - stick directly under header */
 .feed-tabs {
   display: flex;
   background: var(--bg-primary, #ffffff);
   border-bottom: 1px solid var(--border-light, #e2e8f0);
   position: sticky;
-  top: 60px; /* CHANGED from calc(60px + env(safe-area-inset-top, 0)) - Should stick right under header */
+  top: calc(60px + env(safe-area-inset-top, 0)); /* FIXED: Match header height exactly */
   z-index: 50;
-  margin-top: 0;
+  margin-top: 0; /* CRITICAL: Remove any margin */
 }
 
 .feed-tab {
@@ -2655,6 +2693,60 @@ body.dark-mode {
   
   .main-content {
     min-height: calc(100vh - 132px);
+  }
+}
+
+/* FIX 3: RESPONSIVE IMAGE HANDLING */
+
+/* Remove conflicting media queries */
+@media (min-aspect-ratio: 1/1) {
+  .post-image-container {
+    max-height: none; /* REMOVED: Conflicting height restrictions */
+  }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .post-image-container {
+    max-height: none; /* REMOVED: Conflicting height restrictions */
+  }
+}
+
+/* Mobile-specific image improvements */
+@media (max-width: 768px) {
+  .post-image {
+    max-height: 70vh; /* Reasonable limit for mobile feed */
+  }
+  
+  .post-image-full {
+    max-height: none; /* No limits on post page */
+  }
+  
+  /* Tighter header on mobile */
+  .header-content {
+    padding: 8px 12px;
+  }
+}
+
+/* FIX 4: DARK MODE IMAGE DISPLAY */
+.dark-mode .post-image-container,
+.dark-mode .post-image,
+.dark-mode .post-image-full {
+  background: #000; /* Consistent black background */
+}
+
+/* FIX 5: SAFE AREA FALLBACKS */
+@supports not (padding-top: env(safe-area-inset-top)) {
+  .top-header-clean {
+    height: 60px;
+    padding-top: 0;
+  }
+  
+  .app-container {
+    padding-top: 60px;
+  }
+  
+  .feed-tabs {
+    top: 60px;
   }
 }
 
@@ -4639,6 +4731,22 @@ body.dark-mode {
 
 .dark-mode .photo-count-status {
   background: var(--bg-secondary, #2d3748);
+}
+
+/* FIX 8: TAGGING PHOTO DISPLAY (for future reference) */
+.tagging-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* CRITICAL: Always show full image for tagging */
+  display: block;
+}
+
+/* CLEANUP: Remove old conflicting rules */
+.post-image-container.flexible,
+.post-container-flexible {
+  /* Remove these if they exist */
+  height: auto !important;
+  max-height: none !important;
 }
 
 /* FALLBACK: For browsers that don't support env() */
