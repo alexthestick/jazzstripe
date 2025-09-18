@@ -1,4 +1,44 @@
 /* ==========================================================================
+   CRITICAL FIX: Header Spacing Override - ADD AT VERY TOP
+   ========================================================================== */
+
+.top-header-clean {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: var(--bg-primary, #ffffff) !important;
+  border-bottom: 1px solid var(--border-light, #e2e8f0) !important;
+  z-index: 999 !important;
+  height: calc(60px + env(safe-area-inset-top, 0)) !important;
+  padding-top: env(safe-area-inset-top, 0) !important;
+}
+
+.top-header-clean .header-content {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 12px 16px !important;
+  max-width: 600px !important;
+  margin: 0 auto !important;
+  height: 60px !important;
+}
+
+.app-container {
+  padding-top: calc(60px + env(safe-area-inset-top, 0)) !important;
+  padding-bottom: 80px !important;
+  min-height: 100vh !important;
+  background: var(--secondary, #ffffff) !important;
+}
+
+.feed-tabs {
+  position: sticky !important;
+  top: calc(60px + env(safe-area-inset-top, 0)) !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+
+/* ==========================================================================
    MOBILE OPTIMIZATION BEST PRACTICES - Jazzstripe App
    
    IMPLEMENTED OPTIMIZATIONS:
@@ -727,7 +767,8 @@ body.dark-mode {
     color: #fff;
 }
 
-/* Header */
+/* Header - CONFLICTING RULES COMMENTED OUT */
+/*
 .header {
     position: sticky;
     top: 0;
@@ -746,6 +787,7 @@ body.dark-mode {
     justify-content: space-between;
     align-items: center;
 }
+*/
 
 .logo {
     height: 32px;
